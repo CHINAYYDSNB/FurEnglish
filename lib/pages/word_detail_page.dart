@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dictionary_entry.dart';
 import '../api/dictionary_api.dart';
+import '../api/word_info_api.dart';
 import '../widgets/meaning_section.dart';
 import '../widgets/phonetic_badge.dart';
 import '../widgets/audio_play_button.dart';
@@ -17,6 +18,7 @@ class WordDetailPage extends ConsumerStatefulWidget {
 
 class _WordDetailPageState extends ConsumerState<WordDetailPage> {
   List<DictionaryEntry>? _entries;
+  List<String> _relatedRoots = [];
   bool _loading = true;
   String? _error;
 
@@ -29,8 +31,17 @@ class _WordDetailPageState extends ConsumerState<WordDetailPage> {
   Future<void> _fetch() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final e = await DictionaryApi.search(widget.word);
-      if (mounted) setState(() { _entries = e; _loading = false; });
+      final results = await Future.wait([
+        DictionaryApi.search(widget.word),
+        WordInfoApi.getRelated(widget.word),
+      ]);
+      if (mounted) {
+        setState(() {
+          _entries = results[0] as List<DictionaryEntry>;
+          _relatedRoots = WordInfoApi.extractRoots(results[1] as List<Map<String, dynamic>>);
+          _loading = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
@@ -60,9 +71,7 @@ class _WordDetailPageState extends ConsumerState<WordDetailPage> {
   }
 
   Widget _buildBody(ThemeData theme) {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: FurColors.primary));
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator(color: FurColors.primary));
     if (_error != null) {
       return Center(
         child: Padding(
@@ -91,36 +100,72 @@ class _WordDetailPageState extends ConsumerState<WordDetailPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
       children: [
-        // Word + phonetic + play button
+        // Word + phonetic + play
         Row(
           children: [
-            Expanded(
-              child: Text(entry.word, style: theme.textTheme.displayLarge),
-            ),
+            Expanded(child: Text(entry.word, style: theme.textTheme.displayLarge)),
             const SizedBox(width: 8),
             AudioPlayButton(text: entry.word),
             if (entry.bestPhonetic.isNotEmpty) ...[
               const SizedBox(width: 8),
-              PhoneticBadge(
-                phoneticText: entry.bestPhonetic,
-                audioUrl: entry.bestAudioUrl,
-                onPlay: () {},
-              ),
+              PhoneticBadge(phoneticText: entry.bestPhonetic, audioUrl: entry.bestAudioUrl, onPlay: () {}),
             ],
           ],
         ),
         const SizedBox(height: 20),
-        // Meanings
+        // ── Meanings ──
         ...entry.meanings.map((m) => MeaningSection(meaning: m)),
-        // Origin
+        // ── Etymology / Origin ──
         if (entry.origin != null && entry.origin!.isNotEmpty) ...[
-          const Divider(color: FurColors.divider),
+          _SectionHeader(icon: Icons.history, title: '词源'),
           const SizedBox(height: 8),
-          Text('词源', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(entry.origin!, style: theme.textTheme.bodyMedium),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: FurColors.background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: FurColors.divider),
+            ),
+            child: Text(entry.origin!, style: theme.textTheme.bodyMedium),
+          ),
+          const SizedBox(height: 16),
         ],
-        const SizedBox(height: 40),
+        // ── Related roots / affixes ──
+        if (_relatedRoots.isNotEmpty) ...[
+          _SectionHeader(icon: Icons.account_tree, title: '词根 / 关联词'),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _relatedRoots.map((r) => ActionChip(
+              label: Text(r),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => WordDetailPage(word: r),
+                ));
+              },
+            )).toList(),
+          ),
+        ],
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  const _SectionHeader({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: FurColors.primary),
+        const SizedBox(width: 6),
+        Text(title, style: Theme.of(context).textTheme.titleMedium),
       ],
     );
   }
