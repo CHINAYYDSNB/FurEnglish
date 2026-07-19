@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'api_keys.dart';
 
 class AiService {
@@ -7,43 +8,47 @@ class AiService {
 
   static final _dio = Dio(BaseOptions(
     baseUrl: 'https://api.deepseek.com/v1',
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
+    connectTimeout: const Duration(seconds: 15),
+    receiveTimeout: const Duration(seconds: 90),
     headers: {
       'Authorization': 'Bearer $kDeepSeekKey',
       'Content-Type': 'application/json',
     },
   ));
 
-  /// Analyze a Chinese sentence: return English translation + phrase breakdown
-  /// Returns: { "translation": "...", "phrases": ["phrase1", "phrase2", ...] }
+  /// Analyze Chinese text → English translation + phrase breakdown
   static Future<Map<String, dynamic>> analyzeSentence(String text) async {
     try {
       final resp = await _dio.post('/chat/completions', data: {
         'model': 'deepseek-chat',
+        'temperature': 0.3,
+        'max_tokens': 4096,
         'messages': [
           {
             'role': 'system',
-            'content': '''You are an English learning assistant. Given a Chinese sentence:
-1. Translate it to natural English
-2. Break the English translation into meaningful phrases (3-6 words each)
-Return ONLY valid JSON:
-{"translation": "full English translation", "phrases": ["phrase 1", "phrase 2"]}'''
+            'content': 'You are an English learning assistant.\n1. Translate the Chinese text into natural, flowing English.\n2. Split the ENGLISH translation (NOT the Chinese) into meaningful phrase groups of 3-6 English words each.\n3. Return ONLY valid JSON, no markdown:\n{"translation": "the full English translation", "phrases": ["english phrase 1", "english phrase 2", "english phrase 3"]}'
           },
           {'role': 'user', 'content': text},
         ],
-        'temperature': 0.3,
-        'max_tokens': 500,
       });
+
       final data = resp.data as Map<String, dynamic>;
-      final content = data['choices']?[0]?['message']?['content']?.toString() ?? '';
-      // Extract JSON from response
+      var content = data['choices']?[0]?['message']?['content']?.toString() ?? '';
+
+      content = content
+          .replaceAll(RegExp(r'```json\s*'), '')
+          .replaceAll(RegExp(r'```\s*'), '')
+          .trim();
+
       final jsonMatch = RegExp(r'\{.*\}', dotAll: true).firstMatch(content);
       if (jsonMatch != null) {
         return jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
       }
-      return {'translation': '', 'phrases': <String>[]};
+
+      debugPrint('AiService: no JSON in response');
+      return {'translation': content, 'phrases': <String>[]};
     } catch (e) {
+      debugPrint('AiService error: $e');
       return {'translation': '', 'phrases': <String>[]};
     }
   }

@@ -3,6 +3,7 @@ import '../models/dictionary_entry.dart';
 import '../api/dictionary_api.dart';
 import '../api/translate_api.dart';
 import '../api/ai_service.dart';
+import '../utils/phrase_splitter.dart';
 
 class SearchState {
   final String query;
@@ -70,9 +71,13 @@ class SearchNotifier extends StateNotifier<SearchState> {
     final q = (word ?? state.query).trim();
     if (q.isEmpty) return;
 
-    final isCn = TranslateApi.isChinese(q);
+    // Strip spaces from Chinese input
+    final cleanQ = TranslateApi.isChinese(q)
+        ? q.replaceAll(RegExp(r'\s+'), '')
+        : q;
+    final isCn = TranslateApi.isChinese(cleanQ);
     state = state.copyWith(
-      query: q,
+      query: cleanQ,
       loading: true,
       error: null,
       isChineseQuery: isCn,
@@ -84,13 +89,22 @@ class SearchNotifier extends StateNotifier<SearchState> {
     try {
       // ── Chinese: DeepSeek translate + phrase split ──
       if (isCn) {
-        final result = await AiService.analyzeSentence(q);
-        final translation = result['translation']?.toString() ?? '';
-        final phrases = (result['phrases'] as List?)
+        final result = await AiService.analyzeSentence(cleanQ);
+        var translation = result['translation']?.toString() ?? '';
+        var phrases = (result['phrases'] as List?)
             ?.map((p) => p.toString())
             .where((p) => p.isNotEmpty)
             .toList() ?? <String>[];
-        final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
+
+        // Fallback: if AI fails, use public translate API
+        if (translation.isEmpty) {
+          translation = await TranslateApi.zhToEnFull(cleanQ);
+          if (translation.isNotEmpty) {
+            phrases = splitIntoPhrases(translation);
+          }
+        }
+
+        final history = [cleanQ, ...state.history.where((h) => h != cleanQ)].take(10).toList();
         state = state.copyWith(
           translatedPhrase: translation.isNotEmpty ? translation : '翻译失败',
           aiPhrases: phrases,
@@ -101,8 +115,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
       }
 
       // ── English phrase: split and search each word ──
-      if (_isPhrase(q)) {
-        final words = q
+      if (_isPhrase(cleanQ)) {
+        final words = cleanQ
             .split(RegExp(r'[ ,./;:!?，。；：！？]+'))
             .map((w) => w.replaceAll(RegExp(r'[^a-zA-Z-]'), '').toLowerCase())
             .where((w) => w.isNotEmpty && w.length > 1)
@@ -119,7 +133,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
             phraseWords.add(PhraseWord(word: w));
           }
         }
-        final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
+        final history = [cleanQ, ...state.history.where((h) => h != cleanQ)].take(10).toList();
         state = state.copyWith(
           isPhrase: true,
           phraseWords: phraseWords,
@@ -130,8 +144,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
       }
 
       // ── English single word: normal dictionary lookup ──
-      final results = await DictionaryApi.search(q);
-      final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
+      final results = await DictionaryApi.search(cleanQ);
+      final history = [cleanQ, ...state.history.where((h) => h != cleanQ)].take(10).toList();
       state = state.copyWith(results: results, loading: false, history: history);
     } catch (e) {
       state = state.copyWith(loading: false, error: e.toString());

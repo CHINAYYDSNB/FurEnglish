@@ -107,7 +107,6 @@ class _WordSheetState extends State<_WordSheet> {
         .toList();
 
     return [
-      // Chinese meaning
       Row(
         children: [
           const Icon(Icons.translate, size: 16, color: FurColors.primary),
@@ -129,20 +128,25 @@ class _WordSheetState extends State<_WordSheet> {
         )),
       ),
       const SizedBox(height: 16),
-      // Tappable word chips
       Text('点击单词查看详细释义', style: theme.textTheme.labelSmall),
       const SizedBox(height: 8),
       Wrap(
         spacing: 6,
         runSpacing: 6,
-        children: words.map((w) => ActionChip(
-          label: Text(w, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-          backgroundColor: FurColors.surface,
-          side: const BorderSide(color: FurColors.divider),
-          onPressed: () {
-            showWordPopup(context, w.toLowerCase());
-          },
-        )).toList(),
+        children: words.map((w) {
+          final targetWord = w.toLowerCase();
+          return ActionChip(
+            label: Text(w, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            backgroundColor: FurColors.surface,
+            side: const BorderSide(color: FurColors.divider),
+            onPressed: () {
+              Navigator.of(context).pop();
+              Future.delayed(Duration.zero, () {
+                showWordPopup(context, targetWord);
+              });
+            },
+          );
+        }).toList(),
       ),
     ];
   }
