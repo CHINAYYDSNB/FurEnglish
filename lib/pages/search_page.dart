@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/search_provider.dart';
-import '../pages/word_detail_page.dart';
 import '../widgets/word_card.dart';
+import '../widgets/word_popup.dart';
 import '../theme/colors.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
@@ -232,10 +232,7 @@ class _TranslationSentenceView extends StatelessWidget {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => WordDetailPage(word: clean)),
-                    );
+                    showWordPopup(context, clean);
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
