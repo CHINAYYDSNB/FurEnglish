@@ -1,13 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dictionary_entry.dart';
 import '../api/dictionary_api.dart';
+import '../api/translate_api.dart';
 
 class SearchState {
   final String query;
   final List<DictionaryEntry> results;
   final bool loading;
   final String? error;
-  final List<String> history; // last 10 queries
+  final List<String> history;
+  final String? translatedWord; // Chinese → English result
+  final bool isChineseQuery;
 
   const SearchState({
     this.query = '',
@@ -15,6 +18,8 @@ class SearchState {
     this.loading = false,
     this.error,
     this.history = const [],
+    this.translatedWord,
+    this.isChineseQuery = false,
   });
 
   SearchState copyWith({
@@ -23,6 +28,8 @@ class SearchState {
     bool? loading,
     String? error,
     List<String>? history,
+    String? translatedWord,
+    bool? isChineseQuery,
   }) =>
       SearchState(
         query: query ?? this.query,
@@ -30,6 +37,8 @@ class SearchState {
         loading: loading ?? this.loading,
         error: error,
         history: history ?? this.history,
+        translatedWord: translatedWord,
+        isChineseQuery: isChineseQuery ?? this.isChineseQuery,
       );
 }
 
@@ -44,10 +53,29 @@ class SearchNotifier extends StateNotifier<SearchState> {
     final q = (word ?? state.query).trim();
     if (q.isEmpty) return;
 
-    state = state.copyWith(query: q, loading: true, error: null);
+    final isCn = TranslateApi.isChinese(q);
+    state = state.copyWith(
+      query: q,
+      loading: true,
+      error: null,
+      isChineseQuery: isCn,
+      translatedWord: null,
+    );
 
     try {
-      final results = await DictionaryApi.search(q);
+      String lookupWord = q;
+
+      if (isCn) {
+        // Chinese → translate to English first
+        final enWord = await TranslateApi.zhToEn(q);
+        if (enWord.isNotEmpty) {
+          lookupWord = enWord;
+          state = state.copyWith(translatedWord: enWord);
+        }
+      }
+
+      // Look up English word in dictionary
+      final results = await DictionaryApi.search(lookupWord);
       final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
       state = state.copyWith(
         results: results,

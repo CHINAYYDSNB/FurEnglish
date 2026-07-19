@@ -1,0 +1,28 @@
+import 'package:dio/dio.dart';
+
+/// MyMemory translation API — free, no key required
+class TranslateApi {
+  const TranslateApi._();
+
+  static final _dio = Dio(BaseOptions(
+    baseUrl: 'https://api.mymemory.translated.net',
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 10),
+  ));
+
+  /// Translate Chinese → English
+  static Future<String> zhToEn(String text) async {
+    if (text.isEmpty) return '';
+    final resp = await _dio.get('/get', queryParameters: {
+      'q': text.trim(),
+      'langpair': 'zh|en',
+    });
+    final data = resp.data as Map<String, dynamic>;
+    return data['responseData']?['translatedText']?.toString() ?? '';
+  }
+
+  /// Check if text contains Chinese characters
+  static bool isChinese(String text) {
+    return RegExp(r'[一-鿿]').hasMatch(text);
+  }
+}
