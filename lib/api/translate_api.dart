@@ -10,7 +10,14 @@ class TranslateApi {
     receiveTimeout: const Duration(seconds: 10),
   ));
 
-  /// Translate Chinese → English, return first word only (dictionary-friendly)
+  /// Clean MyMemory translation artifacts
+  static String _clean(String text) {
+    return text
+        .replaceAll(RegExp(r'[\[\]\\]'), '') // strip [ ] \
+        .trim();
+  }
+
+  /// Translate Chinese → English, return first alpha-word for dictionary lookup
   static Future<String> zhToEn(String text) async {
     if (text.isEmpty) return '';
     try {
@@ -19,10 +26,15 @@ class TranslateApi {
         'langpair': 'zh|en',
       });
       final data = resp.data as Map<String, dynamic>;
-      final full = data['responseData']?['translatedText']?.toString() ?? '';
+      final full = _clean(data['responseData']?['translatedText']?.toString() ?? '');
       if (full.isEmpty) return '';
-      // Take first word only for dictionary lookup
-      return full.split(RegExp(r'[ ,./;]')).first;
+      // Split and find first valid English word (no digits/symbols)
+      final words = full.split(RegExp(r'[ ,./;:!?]+'));
+      for (final w in words) {
+        final clean = w.replaceAll(RegExp(r'[^a-zA-Z-]'), '');
+        if (clean.isNotEmpty && clean.length > 1) return clean.toLowerCase();
+      }
+      return '';
     } catch (_) {
       return '';
     }
@@ -37,7 +49,7 @@ class TranslateApi {
         'langpair': 'zh|en',
       });
       final data = resp.data as Map<String, dynamic>;
-      return data['responseData']?['translatedText']?.toString() ?? '';
+      return _clean(data['responseData']?['translatedText']?.toString() ?? '');
     } catch (_) {
       return '';
     }
