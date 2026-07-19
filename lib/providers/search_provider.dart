@@ -93,18 +93,34 @@ class SearchNotifier extends StateNotifier<SearchState> {
         final full = await TranslateApi.zhToEnFull(q);
         if (full.isNotEmpty) {
           state = state.copyWith(translatedPhrase: full);
-          // Short phrase (≤3 chars): just show translation, don't split
-          if (q.length <= 3) {
-            try {
-              final firstWord = await TranslateApi.zhToEn(q);
-              final results = await DictionaryApi.search(firstWord);
-              final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
-              state = state.copyWith(results: results, loading: false, history: history);
-            } catch (_) {
-              state = state.copyWith(loading: false, translatedPhrase: full);
+          // For Chinese phrases: show translation, filter stop words from breakdown
+          if (full.contains(' ')) {
+            final stopWords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
+                'am', 'of', 'to', 'in', 'on', 'at', 'for', 'with', 'it', 'and', 'or',
+                'that', 'this', 'these', 'those', 'do', 'does', 'did', 'has', 'have',
+                'had', 'will', 'would', 'can', 'could', 'may', 'might', 'shall', 'should'};
+            final words = full
+                .split(RegExp(r'[ ,./;:!?，。；：！？]+'))
+                .map((w) => w.replaceAll(RegExp(r'[^a-zA-Z-]'), '').toLowerCase())
+                .where((w) => w.length > 2 && !stopWords.contains(w))
+                .toSet()
+                .take(5)
+                .toList();
+            final phraseWords = <PhraseWord>[];
+            for (final w in words) {
+              try {
+                final entries = await DictionaryApi.search(w);
+                phraseWords.add(PhraseWord(word: w, entry: entries.isNotEmpty ? entries.first : null));
+              } catch (_) {
+                phraseWords.add(PhraseWord(word: w));
+              }
             }
+            final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
+            state = state.copyWith(phraseWords: phraseWords, loading: false, history: history);
             return;
           }
+          // Single word translation
+          lookupText = full;
           // For Chinese sentences, show translation + word breakdown
           if (full.contains(' ') && full.split(' ').length > 2) {
             final words = full
