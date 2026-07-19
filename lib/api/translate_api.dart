@@ -43,6 +43,27 @@ class TranslateApi {
     return '';
   }
 
+  static Future<String> enToZh(String text) async {
+    if (text.isEmpty) return '';
+    try {
+      final resp = await _dio.get('/translate_a/single', queryParameters: {
+        'client': 'gtx',
+        'sl': 'en',
+        'tl': 'zh-CN',
+        'dt': 't',
+        'q': text.trim(),
+      });
+      final data = resp.data as List;
+      final buf = StringBuffer();
+      for (final block in data[0] as List) {
+        buf.write(block[0]);
+      }
+      return buf.toString().trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
   static bool isChinese(String text) {
     return RegExp(r'[一-鿿]').hasMatch(text);
   }
