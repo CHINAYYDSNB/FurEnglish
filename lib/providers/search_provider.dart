@@ -93,7 +93,19 @@ class SearchNotifier extends StateNotifier<SearchState> {
         final full = await TranslateApi.zhToEnFull(q);
         if (full.isNotEmpty) {
           state = state.copyWith(translatedPhrase: full);
-          // For Chinese sentences, keep only the translation — don't split into words
+          // Short phrase (≤3 chars): just show translation, don't split
+          if (q.length <= 3) {
+            try {
+              final firstWord = await TranslateApi.zhToEn(q);
+              final results = await DictionaryApi.search(firstWord);
+              final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
+              state = state.copyWith(results: results, loading: false, history: history);
+            } catch (_) {
+              state = state.copyWith(loading: false, translatedPhrase: full);
+            }
+            return;
+          }
+          // For Chinese sentences, show translation + word breakdown
           if (full.contains(' ') && full.split(' ').length > 2) {
             final words = full
                 .split(RegExp(r'[ ,./;:!?]+'))
