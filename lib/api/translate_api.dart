@@ -10,15 +10,37 @@ class TranslateApi {
     receiveTimeout: const Duration(seconds: 10),
   ));
 
-  /// Translate Chinese → English
+  /// Translate Chinese → English, return first word only (dictionary-friendly)
   static Future<String> zhToEn(String text) async {
     if (text.isEmpty) return '';
-    final resp = await _dio.get('/get', queryParameters: {
-      'q': text.trim(),
-      'langpair': 'zh|en',
-    });
-    final data = resp.data as Map<String, dynamic>;
-    return data['responseData']?['translatedText']?.toString() ?? '';
+    try {
+      final resp = await _dio.get('/get', queryParameters: {
+        'q': text.trim(),
+        'langpair': 'zh|en',
+      });
+      final data = resp.data as Map<String, dynamic>;
+      final full = data['responseData']?['translatedText']?.toString() ?? '';
+      if (full.isEmpty) return '';
+      // Take first word only for dictionary lookup
+      return full.split(RegExp(r'[ ,./;]')).first;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  /// Full translation (multi-word), for display purposes
+  static Future<String> zhToEnFull(String text) async {
+    if (text.isEmpty) return '';
+    try {
+      final resp = await _dio.get('/get', queryParameters: {
+        'q': text.trim(),
+        'langpair': 'zh|en',
+      });
+      final data = resp.data as Map<String, dynamic>;
+      return data['responseData']?['translatedText']?.toString() ?? '';
+    } catch (_) {
+      return '';
+    }
   }
 
   /// Check if text contains Chinese characters

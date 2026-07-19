@@ -66,11 +66,11 @@ class SearchNotifier extends StateNotifier<SearchState> {
       String lookupWord = q;
 
       if (isCn) {
-        // Chinese → translate to English first
-        final enWord = await TranslateApi.zhToEn(q);
-        if (enWord.isNotEmpty) {
-          lookupWord = enWord;
-          state = state.copyWith(translatedWord: enWord);
+        final full = await TranslateApi.zhToEnFull(q);
+        final firstWord = await TranslateApi.zhToEn(q);
+        if (firstWord.isNotEmpty) {
+          lookupWord = firstWord;
+          state = state.copyWith(translatedWord: full.isNotEmpty ? full : firstWord);
         }
       }
 
