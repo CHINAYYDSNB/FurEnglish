@@ -176,30 +176,51 @@ class _TranslationHeader extends StatelessWidget {
   final String translation;
   const _TranslationHeader({required this.query, required this.translation});
 
+  bool get _isSentence => translation.contains(' ') && translation.split(' ').length > 2;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Card(
         color: FurColors.primaryContainer,
         child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.translate, color: FurColors.primary, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: Theme.of(context).textTheme.bodyLarge,
-                    children: [
-                      TextSpan(text: query, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      const TextSpan(text: ' → ', style: TextStyle(color: FurColors.primary)),
-                      TextSpan(text: translation, style: const TextStyle(fontWeight: FontWeight.w700, color: FurColors.primary)),
-                    ],
+              // Full translation
+              Row(
+                children: [
+                  const Icon(Icons.translate, color: FurColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: RichText(
+                      text: TextSpan(
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        children: [
+                          TextSpan(text: query, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          const TextSpan(text: '\n', style: TextStyle(fontSize: 4)),
+                          TextSpan(
+                            text: translation,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: FurColors.primary,
+                              fontSize: _isSentence ? 18 : 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
+              if (_isSentence) ...[
+                const SizedBox(height: 10),
+                const Divider(color: FurColors.primary, height: 1),
+                const SizedBox(height: 8),
+                Text('拆分释义', style: Theme.of(context).textTheme.labelSmall),
+              ],
             ],
           ),
         ),

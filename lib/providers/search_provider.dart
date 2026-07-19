@@ -91,8 +91,33 @@ class SearchNotifier extends StateNotifier<SearchState> {
       // Chinese input: translate first
       if (isCn) {
         final full = await TranslateApi.zhToEnFull(q);
-        if (full.isNotEmpty) lookupText = full;
-        state = state.copyWith(translatedPhrase: full.isNotEmpty ? full : null);
+        if (full.isNotEmpty) {
+          state = state.copyWith(translatedPhrase: full);
+          // For Chinese sentences, keep only the translation — don't split into words
+          if (full.contains(' ') && full.split(' ').length > 2) {
+            final words = full
+                .split(RegExp(r'[ ,./;:!?]+'))
+                .where((w) => w.length > 2)
+                .map((w) => w.replaceAll(RegExp(r'[^a-zA-Z-]'), '').toLowerCase())
+                .where((w) => w.isNotEmpty)
+                .toSet()
+                .take(5)
+                .toList();
+            final phraseWords = <PhraseWord>[];
+            for (final w in words) {
+              try {
+                final entries = await DictionaryApi.search(w);
+                phraseWords.add(PhraseWord(word: w, entry: entries.isNotEmpty ? entries.first : null));
+              } catch (_) {
+                phraseWords.add(PhraseWord(word: w));
+              }
+            }
+            final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
+            state = state.copyWith(phraseWords: phraseWords, loading: false, history: history);
+            return;
+          }
+          lookupText = full;
+        }
       }
 
       // Phrase / multi-word: split and search each word
