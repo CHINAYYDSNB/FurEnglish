@@ -1,55 +1,48 @@
 import 'package:dio/dio.dart';
 
-/// MyMemory translation API — free, no key required
+/// Lingva Translate — free Google Translate proxy, sentence-level translation
 class TranslateApi {
   const TranslateApi._();
 
   static final _dio = Dio(BaseOptions(
-    baseUrl: 'https://api.mymemory.translated.net',
+    baseUrl: 'https://lingva.ml',
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
   ));
 
-  /// Clean MyMemory translation artifacts
+  /// Clean translation artifacts
   static String _clean(String text) {
     return text
-        .replaceAll(RegExp(r'[\[\]\\]'), '') // strip [ ] \
+        .replaceAll(RegExp(r'[\[\]\\]'), '')
         .trim();
   }
 
-  /// Translate Chinese → English, return first alpha-word for dictionary lookup
-  static Future<String> zhToEn(String text) async {
+  /// Translate Chinese → English (full sentence)
+  static Future<String> zhToEnFull(String text) async {
     if (text.isEmpty) return '';
     try {
-      final resp = await _dio.get('/get', queryParameters: {
-        'q': text.trim(),
-        'langpair': 'zh|en',
-      });
+      final resp = await _dio.get('/api/v1/zh/en/${Uri.encodeComponent(text.trim())}');
       final data = resp.data as Map<String, dynamic>;
-      final full = _clean(data['responseData']?['translatedText']?.toString() ?? '');
-      if (full.isEmpty) return '';
-      // Split and find first valid English word (no digits/symbols)
-      final words = full.split(RegExp(r'[ ,./;:!?]+'));
-      for (final w in words) {
-        final clean = w.replaceAll(RegExp(r'[^a-zA-Z-]'), '');
-        if (clean.isNotEmpty && clean.length > 1) return clean.toLowerCase();
-      }
-      return '';
+      return _clean(data['translation']?.toString() ?? '');
     } catch (_) {
       return '';
     }
   }
 
-  /// Full translation (multi-word), for display purposes
-  static Future<String> zhToEnFull(String text) async {
+  /// Translate Chinese → English, return first content word for dict lookup
+  static Future<String> zhToEn(String text) async {
     if (text.isEmpty) return '';
     try {
-      final resp = await _dio.get('/get', queryParameters: {
-        'q': text.trim(),
-        'langpair': 'zh|en',
-      });
+      final resp = await _dio.get('/api/v1/zh/en/${Uri.encodeComponent(text.trim())}');
       final data = resp.data as Map<String, dynamic>;
-      return _clean(data['responseData']?['translatedText']?.toString() ?? '');
+      final full = _clean(data['translation']?.toString() ?? '');
+      if (full.isEmpty) return '';
+      // Find first valid English word (>1 char, no digits)
+      for (final w in full.split(RegExp(r'[ ,./;:!?]+'))) {
+        final clean = w.replaceAll(RegExp(r'[^a-zA-Z-]'), '');
+        if (clean.length > 1) return clean.toLowerCase();
+      }
+      return '';
     } catch (_) {
       return '';
     }
