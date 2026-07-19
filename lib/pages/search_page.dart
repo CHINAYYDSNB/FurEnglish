@@ -228,14 +228,14 @@ class _TranslationSentenceView extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: displayPhrases.map((phrase) {
-              final keyword = phraseKeyWord(phrase);
+              final lookup = phrase.contains(' ') ? phrase : phraseKeyWord(phrase);
               return Material(
                 color: FurColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
-                    showWordPopup(context, keyword);
+                    showWordPopup(context, lookup);
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
