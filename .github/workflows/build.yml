@@ -1,0 +1,89 @@
+name: Build & Mirror
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    name: Mirror to CNB
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push to CNB
+        env:
+          CNB_USERNAME: ${{ secrets.CNB_USERNAME }}
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+        run: |
+          if [ -z "$CNB_USERNAME" ] || [ -z "$CNB_TOKEN" ]; then echo "CNB not configured"; exit 0; fi
+          REMOTE="https://${CNB_USERNAME}:${CNB_TOKEN}@cnb.cool/Lingqi_Team/FurEnglish.git"
+          git remote add cnb "$REMOTE" 2>/dev/null || git remote set-url cnb "$REMOTE"
+          git push cnb --force --all
+          git push cnb --force --tags
+
+  android:
+    name: Build Release APK
+    needs: mirror
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+
+      - name: Create api_keys.dart
+        env:
+          DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
+        run: echo "const kDeepSeekKey = '${DEEPSEEK_KEY}';" > lib/api/api_keys.dart
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/furenglish.keystore
+            cat > android/key.properties << EOF
+          storeFile=furenglish.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+            echo "Release signing configured"
+          else
+            echo "No keystore, using debug signing"
+          fi
+
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: furenglish-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload APK to CNB releases
+        env:
+          CNB_USERNAME: ${{ secrets.CNB_USERNAME }}
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+        run: |
+          if [ -z "$CNB_USERNAME" ] || [ -z "$CNB_TOKEN" ]; then echo "CNB not configured"; exit 0; fi
+          AUTH="https://${CNB_USERNAME}:${CNB_TOKEN}@cnb.cool/Lingqi_Team/FurEnglish.git"
+          git clone --depth=1 --branch=releases "$AUTH" /tmp/cnb 2>/dev/null || git clone "$AUTH" /tmp/cnb
+          cd /tmp/cnb
+          git checkout -b releases 2>/dev/null || git checkout releases
+          cp /home/runner/work/FurEnglish/FurEnglish/build/app/outputs/flutter-apk/app-release.apk furenglish-latest.apk
+          git config user.email "ci@furenglish.dev"
+          git config user.name "GitHub Actions"
+          git add furenglish-latest.apk
+          git commit -m "APK $(date -u +%Y-%m-%d)" || echo "No changes"
+          git push origin releases

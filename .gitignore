@@ -33,3 +33,7 @@ google-services.json
 # Android Profiling
 *.hprof
 lib/api/api_keys.dart
+
+*.keystore
+*.jks
+android/key.properties
