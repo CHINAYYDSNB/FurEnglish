@@ -1,0 +1,62 @@
+name: furenglish
+description: "A furry-style English dictionary app"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.5.0
+  dio: ^5.4.0
+  go_router: ^14.0.0
+  json_annotation: ^4.8.0
+  flutter_tts: ^4.2.0
+  google_mlkit_text_recognition: ^0.15.1
+  image_picker: ^1.2.1
+  lottie: ^3.3.2
+  cached_network_image: ^3.4.1
+  shared_preferences: ^2.2.0
+  drift: ^2.24.0
+  sqlite3_flutter_libs: ^0.5.0
+  path_provider: ^2.1.0
+  path: ^1.9.0
+  share_plus: ^12.0.0
+  flutter_svg: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.0
+  json_serializable: ^6.7.0
+  drift_dev: ^2.24.0
+  flutter_launcher_icons: ^0.14.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icon.png"
+  adaptive_icon_background: "#F4845F"
+  adaptive_icon_foreground: "assets/images/icon.png"
+
+flutter:
+  uses-material-design: true
+  # fonts and assets to be added when files are ready
+  # assets:
+  #   - assets/animations/
+  #   - assets/images/
+  # fonts:
+  #   - family: Fredoka
+  #     fonts:
+  #       - asset: assets/fonts/FredokaOne-Regular.ttf
+  #   - family: Nunito
+  #     fonts:
+  #       - asset: assets/fonts/Nunito-Regular.ttf
+  #       - asset: assets/fonts/Nunito-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Nunito-Bold.ttf
+  #         weight: 700
