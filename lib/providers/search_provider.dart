@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dictionary_entry.dart';
 import '../api/dictionary_api.dart';
 import '../api/translate_api.dart';
+import '../api/ai_service.dart';
 
 class SearchState {
   final String query;
@@ -11,6 +12,7 @@ class SearchState {
   final String? error;
   final List<String> history;
   final String? translatedPhrase;
+  final List<String> aiPhrases; // DeepSeek phrase breakdown
   final bool isChineseQuery;
   final bool isPhrase;
 
@@ -22,6 +24,7 @@ class SearchState {
     this.error,
     this.history = const [],
     this.translatedPhrase,
+    this.aiPhrases = const [],
     this.isChineseQuery = false,
     this.isPhrase = false,
   });
@@ -34,6 +37,7 @@ class SearchState {
     String? error,
     List<String>? history,
     String? translatedPhrase,
+    List<String>? aiPhrases,
     bool? isChineseQuery,
     bool? isPhrase,
   }) =>
@@ -45,6 +49,7 @@ class SearchState {
         error: error,
         history: history ?? this.history,
         translatedPhrase: translatedPhrase,
+        aiPhrases: aiPhrases ?? this.aiPhrases,
         isChineseQuery: isChineseQuery ?? this.isChineseQuery,
         isPhrase: isPhrase ?? this.isPhrase,
       );
@@ -77,12 +82,18 @@ class SearchNotifier extends StateNotifier<SearchState> {
     );
 
     try {
-      // ── Chinese: translate only, no word lookup ──
+      // ── Chinese: DeepSeek translate + phrase split ──
       if (isCn) {
-        final full = await TranslateApi.zhToEnFull(q);
+        final result = await AiService.analyzeSentence(q);
+        final translation = result['translation']?.toString() ?? '';
+        final phrases = (result['phrases'] as List?)
+            ?.map((p) => p.toString())
+            .where((p) => p.isNotEmpty)
+            .toList() ?? <String>[];
         final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
         state = state.copyWith(
-          translatedPhrase: full.isNotEmpty ? full : '翻译失败',
+          translatedPhrase: translation.isNotEmpty ? translation : '翻译失败',
+          aiPhrases: phrases,
           loading: false,
           history: history,
         );

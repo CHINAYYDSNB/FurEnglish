@@ -106,6 +106,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       return _TranslationSentenceView(
         query: state.query,
         translation: state.translatedPhrase ?? '',
+        phrases: state.aiPhrases,
       );
     }
 
@@ -170,16 +171,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 class _TranslationSentenceView extends StatelessWidget {
   final String query;
   final String translation;
+  final List<String> phrases;
 
   const _TranslationSentenceView({
     required this.query,
     required this.translation,
+    required this.phrases,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final phrases = splitIntoPhrases(translation);
+    final displayPhrases = phrases.isNotEmpty ? phrases : splitIntoPhrases(translation);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -224,7 +227,7 @@ class _TranslationSentenceView extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: phrases.map((phrase) {
+            children: displayPhrases.map((phrase) {
               final keyword = phraseKeyWord(phrase);
               return Material(
                 color: FurColors.surface,
