@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/search_provider.dart';
+import '../utils/phrase_splitter.dart';
 import '../widgets/word_card.dart';
 import '../widgets/word_popup.dart';
 import '../theme/colors.dart';
@@ -178,7 +179,7 @@ class _TranslationSentenceView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final words = translation.split(RegExp(r'[ ,./;:!?]+')).where((w) => w.isNotEmpty).toList();
+    final phrases = splitIntoPhrases(translation);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -217,22 +218,21 @@ class _TranslationSentenceView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // Tappable words
-          Text('点击单词查看释义', style: theme.textTheme.labelSmall),
+          // Tappable phrase chips
+          Text('点击短语查看关键词释义', style: theme.textTheme.labelSmall),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: words.map((w) {
-              final clean = w.replaceAll(RegExp(r'[^a-zA-Z-]'), '').toLowerCase();
-              if (clean.length < 2) return const SizedBox.shrink();
+            children: phrases.map((phrase) {
+              final keyword = phraseKeyWord(phrase);
               return Material(
                 color: FurColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () {
-                    showWordPopup(context, clean);
+                    showWordPopup(context, keyword);
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -241,7 +241,7 @@ class _TranslationSentenceView extends StatelessWidget {
                       border: Border.all(color: FurColors.divider),
                     ),
                     child: Text(
-                      w,
+                      phrase,
                       style: const TextStyle(
                         fontFamily: 'Nunito',
                         fontSize: 14,

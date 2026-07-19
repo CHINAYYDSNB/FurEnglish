@@ -666,6 +666,7 @@ file:///home/lanxi/Projects/FurEnglish/lib/providers/search_provider.dart
 file:///home/lanxi/Projects/FurEnglish/lib/providers/tts_provider.dart
 file:///home/lanxi/Projects/FurEnglish/lib/theme/colors.dart
 file:///home/lanxi/Projects/FurEnglish/lib/theme/components.dart
+file:///home/lanxi/Projects/FurEnglish/lib/utils/phrase_splitter.dart
 file:///home/lanxi/Projects/FurEnglish/lib/widgets/audio_play_button.dart
 file:///home/lanxi/Projects/FurEnglish/lib/widgets/meaning_section.dart
 file:///home/lanxi/Projects/FurEnglish/lib/widgets/phonetic_badge.dart
