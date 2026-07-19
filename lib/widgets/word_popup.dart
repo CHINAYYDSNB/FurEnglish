@@ -140,8 +140,6 @@ class _WordSheetState extends State<_WordSheet> {
           backgroundColor: FurColors.surface,
           side: const BorderSide(color: FurColors.divider),
           onPressed: () {
-            // Close current popup, open word popup
-            Navigator.pop(context);
             showWordPopup(context, w.toLowerCase());
           },
         )).toList(),
