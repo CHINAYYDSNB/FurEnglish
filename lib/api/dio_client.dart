@@ -6,7 +6,7 @@ class DictionaryDio {
 
   DictionaryDio._() {
     _dio = Dio(BaseOptions(
-      baseUrl: 'https://api.dictionaryapi.dev/api/v2',
+      baseUrl: 'https://api.lanxis.top/api/v2',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ));

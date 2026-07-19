@@ -6,7 +6,7 @@ class WordInfoApi {
   const WordInfoApi._();
 
   static final _dio = Dio(BaseOptions(
-    baseUrl: 'https://api.datamuse.com',
+    baseUrl: 'https://datamuse.lanxis.top',
     connectTimeout: const Duration(seconds: 8),
     receiveTimeout: const Duration(seconds: 8),
   ));
