@@ -53,6 +53,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             child: TextField(
               controller: _controller,
               focusNode: _focusNode,
+              maxLines: null,
+              textInputAction: TextInputAction.search,
               onChanged: (v) => ref.read(searchProvider.notifier).updateQuery(v),
               onSubmitted: (_) => _doSearch(),
               decoration: InputDecoration(
