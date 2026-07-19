@@ -9,6 +9,8 @@ class DictionaryDio {
       baseUrl: 'https://api.lanxis.top/api/v2',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
+      followRedirects: true,
+      maxRedirects: 5,
     ));
     _dio.interceptors.add(ErrorNormalizer());
   }

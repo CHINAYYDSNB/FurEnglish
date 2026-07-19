@@ -7929,8 +7929,9 @@ MW:function MW(a){this.b=a},
 a8I:function a8I(){},
 a8J:function a8J(a){this.a=a},
 Ay:function Ay(){},
-aBw(a,b,c){var s=null,r=t.N,q=t.z,p=new A.a1Y($,$,s,"GET",!1,s,c,s,B.fh,A.b1S(),!0,A.t(r,q),!0,5,!0,s,s,B.oL)
-p.Oh(s,s,s,s,s,s,s,s,!1,s,c,s,s,B.fh,s,s,s)
+aBw(a,b,c,d,e){var s=null,r=t.N,q=t.z,p=d==null?5:d
+p=new A.a1Y($,$,s,"GET",!1,s,e,s,B.fh,A.b1S(),!0,A.t(r,q),c!==!1,p,!0,s,s,B.oL)
+p.Oh(s,s,c,s,s,d,s,s,!1,s,e,s,s,B.fh,s,s,s)
 p.sWD(a)
 p.vy$=A.t(r,q)
 p.sX8(b)
@@ -101241,12 +101242,12 @@ s($,"b70","aPu",()=>A.aao(A.bV([B.l7],t.R)))
 s($,"b8f","aQ6",()=>new A.aeS(A.t(t.N,A.aq("ao<d_?>?(d_?)"))))
 s($,"b34","aN0",()=>$.aN1().gQ3())
 s($,"b35","aN1",()=>{var q,p=new A.a4r()
-p.a=A.aBZ(A.aBw("https://api.lanxis.top/api/v2",B.hn,B.hn))
+p.a=A.aBZ(A.aBw("https://api.lanxis.top/api/v2",B.hn,!0,5,B.hn))
 q=p.gQ3().Yk$
 q.D(q,new A.A_())
 return p})
-s($,"b54","aO1",()=>A.aBZ(A.aBw("https://lingva.lanxis.top",B.hn,B.hn)))
-s($,"b5n","aOf",()=>A.aBZ(A.aBw("https://datamuse.lanxis.top",B.nT,B.nT)))
+s($,"b54","aO1",()=>A.aBZ(A.aBw("https://lingva.lanxis.top",B.hn,null,null,B.hn)))
+s($,"b5n","aOf",()=>A.aBZ(A.aBw("https://datamuse.lanxis.top",B.nT,null,null,B.nT)))
 s($,"b77","aPy",()=>{var q=null,p=t.yo,o=A.b([A.uG(q,new A.azD(),"/search"),A.uG(q,new A.azE(),"/word-book"),A.uG(q,new A.azF(),"/review"),A.uG(q,new A.azG(),"/settings")],p),n=A.aT4(q,t.uK)
 p=A.b([new A.rq(new A.azH(),n,q,o,q),A.uG(new A.azI(),q,"/word/:word"),A.uG(new A.azJ(),q,"/ocr")],p)
 return A.aT7(!1,q,q,q,q,"/search",q,q,q,!1,q,!0,q,!1,new A.T3(new A.ahC(p,A.b21(),5)))})
