@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/search_provider.dart';
+import '../pages/word_detail_page.dart';
 import '../widgets/word_card.dart';
 import '../theme/colors.dart';
 
@@ -63,7 +64,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               ),
             ),
           ),
-          if (state.history.isNotEmpty && state.query.isEmpty && state.results.isEmpty && !state.loading)
+          if (state.history.isNotEmpty && state.query.isEmpty && !state.loading)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
@@ -73,8 +74,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   Text('最近搜索', style: theme.textTheme.labelSmall),
                   const SizedBox(height: 6),
                   Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
+                    spacing: 6, runSpacing: 4,
                     children: state.history.map((h) => ActionChip(
                       label: Text(h),
                       onPressed: () {
@@ -96,27 +96,27 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     if (state.loading) {
       return const Center(child: CircularProgressIndicator(color: FurColors.primary));
     }
-
     if (state.error != null) {
       return _ErrorView(error: state.error!, onRetry: _doSearch);
     }
 
-    // Phrase results (multi-word / sentence)
-    if (state.phraseWords.isNotEmpty) {
+    // ── Chinese: show translation sentence card with tappable words ──
+    if (state.isChineseQuery) {
+      return _TranslationSentenceView(
+        query: state.query,
+        translation: state.translatedPhrase ?? '',
+      );
+    }
+
+    // ── English phrase: word breakdown ──
+    if (state.isPhrase && state.phraseWords.isNotEmpty) {
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-        itemCount: state.phraseWords.length + (state.translatedPhrase != null ? 1 : 0),
+        itemCount: state.phraseWords.length,
         itemBuilder: (context, i) {
-          if (state.translatedPhrase != null && i == 0) {
-            return _TranslationHeader(query: state.query, translation: state.translatedPhrase!);
-          }
-          final pwIdx = state.translatedPhrase != null ? i - 1 : i;
-          final pw = state.phraseWords[pwIdx];
+          final pw = state.phraseWords[i];
           if (pw.entry != null) {
-            return WordCard(
-              entry: pw.entry!,
-              onTap: () => context.push('/word/${pw.word}'),
-            );
+            return WordCard(entry: pw.entry!, onTap: () => context.push('/word/${pw.word}'));
           }
           return Card(
             margin: const EdgeInsets.only(bottom: 10),
@@ -125,7 +125,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               child: Row(
                 children: [
                   Expanded(child: Text(pw.word, style: theme.textTheme.titleLarge)),
-                  const Icon(Icons.search_off, color: FurColors.outline, size: 20),
+                  const Text('未找到', style: TextStyle(color: FurColors.onSurfaceVariant)),
                 ],
               ),
             ),
@@ -134,25 +134,19 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       );
     }
 
-    // Single word results
+    // ── English single word results ──
     if (state.results.isNotEmpty) {
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-        itemCount: state.results.length + (state.translatedPhrase != null ? 1 : 0),
-        itemBuilder: (context, i) {
-          if (state.translatedPhrase != null && i == 0) {
-            return _TranslationHeader(query: state.query, translation: state.translatedPhrase!);
-          }
-          final idx = state.translatedPhrase != null ? i - 1 : i;
-          return WordCard(
-            entry: state.results[idx],
-            onTap: () => context.push('/word/${state.results[idx].word}'),
-          );
-        },
+        itemCount: state.results.length,
+        itemBuilder: (context, i) => WordCard(
+          entry: state.results[i],
+          onTap: () => context.push('/word/${state.results[i].word}'),
+        ),
       );
     }
 
-    // Empty state
+    // ── Empty initial state ──
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -171,59 +165,99 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 }
 
-class _TranslationHeader extends StatelessWidget {
+/// Translation sentence card — each word is tappable for dictionary lookup
+class _TranslationSentenceView extends StatelessWidget {
   final String query;
   final String translation;
-  const _TranslationHeader({required this.query, required this.translation});
 
-  bool get _isSentence => translation.contains(' ') && translation.split(' ').length > 2;
+  const _TranslationSentenceView({
+    required this.query,
+    required this.translation,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Card(
-        color: FurColors.primaryContainer,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Full translation
-              Row(
+    final theme = Theme.of(context);
+    final words = translation.split(RegExp(r'[ ,./;:!?]+')).where((w) => w.isNotEmpty).toList();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Translation card
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.translate, color: FurColors.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: Theme.of(context).textTheme.bodyLarge,
-                        children: [
-                          TextSpan(text: query, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          const TextSpan(text: '\n', style: TextStyle(fontSize: 4)),
-                          TextSpan(
-                            text: translation,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: FurColors.primary,
-                              fontSize: _isSentence ? 18 : 14,
-                            ),
-                          ),
-                        ],
-                      ),
+                  Row(
+                    children: [
+                      const Icon(Icons.translate, color: FurColors.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Text('翻译结果', style: theme.textTheme.labelSmall),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    query,
+                    style: theme.textTheme.bodyLarge?.copyWith(color: FurColors.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    translation,
+                    style: theme.textTheme.displayLarge?.copyWith(
+                      fontSize: 24,
+                      color: FurColors.primary,
                     ),
                   ),
                 ],
               ),
-              if (_isSentence) ...[
-                const SizedBox(height: 10),
-                const Divider(color: FurColors.primary, height: 1),
-                const SizedBox(height: 8),
-                Text('拆分释义', style: Theme.of(context).textTheme.labelSmall),
-              ],
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: 16),
+          // Tappable words
+          Text('点击单词查看释义', style: theme.textTheme.labelSmall),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: words.map((w) {
+              final clean = w.replaceAll(RegExp(r'[^a-zA-Z-]'), '').toLowerCase();
+              if (clean.length < 2) return const SizedBox.shrink();
+              return Material(
+                color: FurColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => WordDetailPage(word: clean)),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: FurColors.divider),
+                    ),
+                    child: Text(
+                      w,
+                      style: const TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: FurColors.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -236,6 +270,7 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -245,7 +280,7 @@ class _ErrorView extends StatelessWidget {
             Icon(Icons.search_off_rounded, size: 64, color: FurColors.primary.withAlpha(100)),
             const SizedBox(height: 12),
             Text(error, textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: FurColors.onSurfaceVariant)),
+                style: theme.textTheme.bodyLarge?.copyWith(color: FurColors.onSurfaceVariant)),
             const SizedBox(height: 16),
             FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh, size: 18), label: const Text('重试')),
           ],

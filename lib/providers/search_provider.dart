@@ -3,22 +3,16 @@ import '../models/dictionary_entry.dart';
 import '../api/dictionary_api.dart';
 import '../api/translate_api.dart';
 
-class PhraseWord {
-  final String word;
-  final DictionaryEntry? entry;
-  PhraseWord({required this.word, this.entry});
-}
-
 class SearchState {
   final String query;
   final List<DictionaryEntry> results;
-  final List<PhraseWord> phraseWords; // multi-word results
+  final List<PhraseWord> phraseWords;
   final bool loading;
   final String? error;
   final List<String> history;
   final String? translatedPhrase;
   final bool isChineseQuery;
-  final bool isPhrase; // multi-word or sentence
+  final bool isPhrase;
 
   const SearchState({
     this.query = '',
@@ -64,7 +58,6 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 
   static bool _isPhrase(String text) {
-    // Multi-word: has spaces, commas, or is longer than 20 characters (sentence)
     return text.contains(' ') || text.contains(',') || text.length > 20;
   }
 
@@ -73,88 +66,35 @@ class SearchNotifier extends StateNotifier<SearchState> {
     if (q.isEmpty) return;
 
     final isCn = TranslateApi.isChinese(q);
-    final isPhrase = !isCn && _isPhrase(q);
     state = state.copyWith(
       query: q,
       loading: true,
       error: null,
       isChineseQuery: isCn,
-      isPhrase: isPhrase,
+      isPhrase: false,
       translatedPhrase: null,
       results: const [],
-      phraseWords: const [],
     );
 
     try {
-      String lookupText = q;
-
-      // Chinese input: translate first
+      // ── Chinese: translate only, no word lookup ──
       if (isCn) {
         final full = await TranslateApi.zhToEnFull(q);
-        if (full.isNotEmpty) {
-          state = state.copyWith(translatedPhrase: full);
-          // For Chinese phrases: show translation, filter stop words from breakdown
-          if (full.contains(' ')) {
-            final stopWords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
-                'am', 'of', 'to', 'in', 'on', 'at', 'for', 'with', 'it', 'and', 'or',
-                'that', 'this', 'these', 'those', 'do', 'does', 'did', 'has', 'have',
-                'had', 'will', 'would', 'can', 'could', 'may', 'might', 'shall', 'should'};
-            final words = full
-                .split(RegExp(r'[ ,./;:!?，。；：！？]+'))
-                .map((w) => w.replaceAll(RegExp(r'[^a-zA-Z-]'), '').toLowerCase())
-                .where((w) => w.length > 2 && !stopWords.contains(w))
-                .toSet()
-                .take(5)
-                .toList();
-            final phraseWords = <PhraseWord>[];
-            for (final w in words) {
-              try {
-                final entries = await DictionaryApi.search(w);
-                phraseWords.add(PhraseWord(word: w, entry: entries.isNotEmpty ? entries.first : null));
-              } catch (_) {
-                phraseWords.add(PhraseWord(word: w));
-              }
-            }
-            final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
-            state = state.copyWith(phraseWords: phraseWords, loading: false, history: history);
-            return;
-          }
-          // Single word translation
-          lookupText = full;
-          // For Chinese sentences, show translation + word breakdown
-          if (full.contains(' ') && full.split(' ').length > 2) {
-            final words = full
-                .split(RegExp(r'[ ,./;:!?]+'))
-                .where((w) => w.length > 2)
-                .map((w) => w.replaceAll(RegExp(r'[^a-zA-Z-]'), '').toLowerCase())
-                .where((w) => w.isNotEmpty)
-                .toSet()
-                .take(5)
-                .toList();
-            final phraseWords = <PhraseWord>[];
-            for (final w in words) {
-              try {
-                final entries = await DictionaryApi.search(w);
-                phraseWords.add(PhraseWord(word: w, entry: entries.isNotEmpty ? entries.first : null));
-              } catch (_) {
-                phraseWords.add(PhraseWord(word: w));
-              }
-            }
-            final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
-            state = state.copyWith(phraseWords: phraseWords, loading: false, history: history);
-            return;
-          }
-          lookupText = full;
-        }
+        final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
+        state = state.copyWith(
+          translatedPhrase: full.isNotEmpty ? full : '翻译失败',
+          loading: false,
+          history: history,
+        );
+        return;
       }
 
-      // Phrase / multi-word: split and search each word
-      if (isPhrase || lookupText.contains(' ')) {
-        final words = lookupText
+      // ── English phrase: split and search each word ──
+      if (_isPhrase(q)) {
+        final words = q
             .split(RegExp(r'[ ,./;:!?，。；：！？]+'))
-            .where((w) => w.length > 1)
             .map((w) => w.replaceAll(RegExp(r'[^a-zA-Z-]'), '').toLowerCase())
-            .where((w) => w.isNotEmpty)
+            .where((w) => w.isNotEmpty && w.length > 1)
             .toSet()
             .take(6)
             .toList();
@@ -163,28 +103,25 @@ class SearchNotifier extends StateNotifier<SearchState> {
         for (final w in words) {
           try {
             final entries = await DictionaryApi.search(w);
-            phraseWords.add(PhraseWord(
-              word: w,
-              entry: entries.isNotEmpty ? entries.first : null,
-            ));
+            phraseWords.add(PhraseWord(word: w, entry: entries.isNotEmpty ? entries.first : null));
           } catch (_) {
             phraseWords.add(PhraseWord(word: w));
           }
         }
-
         final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
-        state = state.copyWith(phraseWords: phraseWords, loading: false, history: history);
+        state = state.copyWith(
+          isPhrase: true,
+          phraseWords: phraseWords,
+          loading: false,
+          history: history,
+        );
         return;
       }
 
-      // Single English word: normal lookup
-      final results = await DictionaryApi.search(lookupText);
+      // ── English single word: normal dictionary lookup ──
+      final results = await DictionaryApi.search(q);
       final history = [q, ...state.history.where((h) => h != q)].take(10).toList();
-      state = state.copyWith(
-        results: results,
-        loading: false,
-        history: history,
-      );
+      state = state.copyWith(results: results, loading: false, history: history);
     } catch (e) {
       state = state.copyWith(loading: false, error: e.toString());
     }
@@ -193,6 +130,12 @@ class SearchNotifier extends StateNotifier<SearchState> {
   void clearResults() {
     state = state.copyWith(results: [], phraseWords: [], query: '', error: null);
   }
+}
+
+class PhraseWord {
+  final String word;
+  final DictionaryEntry? entry;
+  PhraseWord({required this.word, this.entry});
 }
 
 final searchProvider =
