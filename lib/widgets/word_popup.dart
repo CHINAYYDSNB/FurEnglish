@@ -100,7 +100,14 @@ class _WordSheetState extends State<_WordSheet> {
     if (_zhMeaning == null || _zhMeaning!.isEmpty) {
       return [Text('暂无释义', style: theme.textTheme.bodyMedium)];
     }
+    final words = widget.word
+        .split(RegExp(r'[ ,./;:!?]+'))
+        .map((w) => w.replaceAll(RegExp(r'[^a-zA-Z-]'), ''))
+        .where((w) => w.length > 1)
+        .toList();
+
     return [
+      // Chinese meaning
       Row(
         children: [
           const Icon(Icons.translate, size: 16, color: FurColors.primary),
@@ -120,6 +127,24 @@ class _WordSheetState extends State<_WordSheet> {
           color: FurColors.onSurface,
           fontWeight: FontWeight.w600,
         )),
+      ),
+      const SizedBox(height: 16),
+      // Tappable word chips
+      Text('点击单词查看详细释义', style: theme.textTheme.labelSmall),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: words.map((w) => ActionChip(
+          label: Text(w, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          backgroundColor: FurColors.surface,
+          side: const BorderSide(color: FurColors.divider),
+          onPressed: () {
+            // Close current popup, open word popup
+            Navigator.pop(context);
+            showWordPopup(context, w.toLowerCase());
+          },
+        )).toList(),
       ),
     ];
   }
