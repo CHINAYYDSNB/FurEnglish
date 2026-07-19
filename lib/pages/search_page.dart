@@ -53,10 +53,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             child: TextField(
               controller: _controller,
               focusNode: _focusNode,
-              maxLines: null,
-              textInputAction: TextInputAction.search,
+              minLines: 1,
+              maxLines: 5,
+              textInputAction: TextInputAction.newline,
               onChanged: (v) => ref.read(searchProvider.notifier).updateQuery(v),
-              onSubmitted: (_) => _doSearch(),
               decoration: InputDecoration(
                 hintText: '查单词 / 搜句子 / 中文翻译...',
                 prefixIcon: const Icon(Icons.search, color: FurColors.onSurfaceVariant),

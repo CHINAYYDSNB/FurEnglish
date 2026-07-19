@@ -12,7 +12,7 @@ class DictionaryApi {
     final clean = word.trim().toLowerCase();
     if (clean.isEmpty) return [];
 
-    final resp = await _dio.get('/entries/en/$clean');
+    final resp = await _dio.get('/api/v2/entries/en/$clean');
 
     if (resp.data is List) {
       return (resp.data as List)

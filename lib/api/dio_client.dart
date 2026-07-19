@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'base_url.dart';
 
 /// Singleton Dio client for Free Dictionary API
 class DictionaryDio {
@@ -6,7 +7,7 @@ class DictionaryDio {
 
   DictionaryDio._() {
     _dio = Dio(BaseOptions(
-      baseUrl: 'https://api.lanxis.top/api/v2',
+      baseUrl: dictBaseUrl(),
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       followRedirects: true,

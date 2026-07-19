@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dictionary_entry.dart';
 import '../api/dictionary_api.dart';
 import '../api/translate_api.dart';
-import '../api/ai_service.dart';
 import '../utils/phrase_splitter.dart';
 
 class SearchState {
@@ -87,23 +86,12 @@ class SearchNotifier extends StateNotifier<SearchState> {
     );
 
     try {
-      // ── Chinese: DeepSeek translate + phrase split ──
+      // ── Chinese: translate + phrase split ──
       if (isCn) {
-        final result = await AiService.analyzeSentence(cleanQ);
-        var translation = result['translation']?.toString() ?? '';
-        var phrases = (result['phrases'] as List?)
-            ?.map((p) => p.toString())
-            .where((p) => p.isNotEmpty)
-            .toList() ?? <String>[];
-
-        // Fallback: if AI fails, use public translate API
-        if (translation.isEmpty) {
-          translation = await TranslateApi.zhToEnFull(cleanQ);
-          if (translation.isNotEmpty) {
-            phrases = splitIntoPhrases(translation);
-          }
-        }
-
+        final translation = await TranslateApi.zhToEnFull(cleanQ);
+        final phrases = translation.isNotEmpty
+            ? splitIntoPhrases(translation)
+            : <String>[];
         final history = [cleanQ, ...state.history.where((h) => h != cleanQ)].take(10).toList();
         state = state.copyWith(
           translatedPhrase: translation.isNotEmpty ? translation : '翻译失败',

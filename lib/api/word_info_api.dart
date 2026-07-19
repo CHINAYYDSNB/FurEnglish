@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'base_url.dart';
 
 /// Additional word info: roots, affixes, related words
 /// Uses Datamuse API (free, no key)
@@ -6,7 +7,7 @@ class WordInfoApi {
   const WordInfoApi._();
 
   static final _dio = Dio(BaseOptions(
-    baseUrl: 'https://datamuse.lanxis.top',
+    baseUrl: datamuseBaseUrl(),
     connectTimeout: const Duration(seconds: 8),
     receiveTimeout: const Duration(seconds: 8),
   ));
