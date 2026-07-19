@@ -4,6 +4,7 @@ import '../models/dictionary_entry.dart';
 import '../api/dictionary_api.dart';
 import '../widgets/meaning_section.dart';
 import '../widgets/phonetic_badge.dart';
+import '../widgets/audio_play_button.dart';
 import '../theme/colors.dart';
 
 class WordDetailPage extends ConsumerStatefulWidget {
@@ -90,17 +91,22 @@ class _WordDetailPageState extends ConsumerState<WordDetailPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
       children: [
-        // Word + phonetic
+        // Word + phonetic + play button
         Row(
           children: [
             Expanded(
               child: Text(entry.word, style: theme.textTheme.displayLarge),
             ),
-            PhoneticBadge(
-              phoneticText: entry.bestPhonetic,
-              audioUrl: entry.bestAudioUrl,
-              onPlay: () {/* TODO: TTS Phase 3 */},
-            ),
+            const SizedBox(width: 8),
+            AudioPlayButton(text: entry.word),
+            if (entry.bestPhonetic.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              PhoneticBadge(
+                phoneticText: entry.bestPhonetic,
+                audioUrl: entry.bestAudioUrl,
+                onPlay: () {},
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 20),

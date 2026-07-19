@@ -141,6 +141,7 @@ file:///home/lanxi/.pub-cache/hosted/pub.dev/flutter_riverpod-2.6.1/lib/src/chan
 file:///home/lanxi/.pub-cache/hosted/pub.dev/flutter_riverpod-2.6.1/lib/src/consumer.dart
 file:///home/lanxi/.pub-cache/hosted/pub.dev/flutter_riverpod-2.6.1/lib/src/framework.dart
 file:///home/lanxi/.pub-cache/hosted/pub.dev/flutter_riverpod-2.6.1/lib/src/internals.dart
+file:///home/lanxi/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/lib/flutter_tts.dart
 file:///home/lanxi/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/lib/flutter_tts_web.dart
 file:///home/lanxi/.pub-cache/hosted/pub.dev/flutter_tts-4.2.5/lib/interop_types.dart
 file:///home/lanxi/.pub-cache/hosted/pub.dev/go_router-14.8.1/lib/go_router.dart
@@ -660,8 +661,10 @@ file:///home/lanxi/Projects/FurEnglish/lib/pages/settings_page.dart
 file:///home/lanxi/Projects/FurEnglish/lib/pages/word_book_page.dart
 file:///home/lanxi/Projects/FurEnglish/lib/pages/word_detail_page.dart
 file:///home/lanxi/Projects/FurEnglish/lib/providers/search_provider.dart
+file:///home/lanxi/Projects/FurEnglish/lib/providers/tts_provider.dart
 file:///home/lanxi/Projects/FurEnglish/lib/theme/colors.dart
 file:///home/lanxi/Projects/FurEnglish/lib/theme/components.dart
+file:///home/lanxi/Projects/FurEnglish/lib/widgets/audio_play_button.dart
 file:///home/lanxi/Projects/FurEnglish/lib/widgets/meaning_section.dart
 file:///home/lanxi/Projects/FurEnglish/lib/widgets/phonetic_badge.dart
 file:///home/lanxi/Projects/FurEnglish/lib/widgets/word_card.dart
