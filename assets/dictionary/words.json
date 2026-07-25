@@ -1,0 +1,71 @@
+[
+  {
+    "word": "serendipity",
+    "phonetic": "/ˌser.ənˈdɪp.ə.ti/",
+    "part_of_speech": "n.",
+    "definitions": ["意外发现珍奇事物的本领", "机缘巧合"],
+    "frequency": 8500,
+    "curriculum": "CET-6",
+    "examples": [
+      {"en": "A fortunate serendipity changed his life.", "zh": "一次幸运的意外发现改变了他的人生。"}
+    ]
+  },
+  {
+    "word": "beautiful",
+    "phonetic": "/ˈbjuː.tɪ.fəl/",
+    "part_of_speech": "adj.",
+    "definitions": ["美丽的", "出色的", "完美的"],
+    "frequency": 9800,
+    "curriculum": "课标核心",
+    "examples": [
+      {"en": "What a beautiful day!", "zh": "多美好的一天！"},
+      {"en": "She has a beautiful voice.", "zh": "她有一副美妙的嗓音。"}
+    ]
+  },
+  {
+    "word": "take off",
+    "phonetic": "/teɪk ɒf/",
+    "part_of_speech": "phrase",
+    "definitions": ["起飞", "脱下（衣服）", "突然成功", "休假"],
+    "frequency": 9200,
+    "curriculum": "课标核心",
+    "examples": [
+      {"en": "The plane takes off at 8 AM.", "zh": "飞机早上8点起飞。"},
+      {"en": "He took off his jacket.", "zh": "他脱下了夹克。"}
+    ]
+  },
+  {
+    "word": "break down",
+    "phonetic": "/breɪk daʊn/",
+    "part_of_speech": "phrase",
+    "definitions": ["分解", "崩溃（情绪）", "抛锚（车）", "发生故障"],
+    "frequency": 8800,
+    "curriculum": "CET-4",
+    "examples": [
+      {"en": "The car broke down on the highway.", "zh": "车在高速上抛锚了。"},
+      {"en": "She broke down in tears.", "zh": "她崩溃大哭。"}
+    ]
+  },
+  {
+    "word": "gorgeous",
+    "phonetic": "/ˈɡɔː.dʒəs/",
+    "part_of_speech": "adj.",
+    "definitions": ["极其美丽的", "华丽的", "令人愉快的"],
+    "frequency": 7600,
+    "curriculum": "CET-6",
+    "examples": [
+      {"en": "What a gorgeous sunset!", "zh": "多美的日落啊！"}
+    ]
+  },
+  {
+    "word": "love",
+    "phonetic": "/lʌv/",
+    "part_of_speech": "v./n.",
+    "definitions": ["爱", "热爱", "喜欢"],
+    "frequency": 10000,
+    "curriculum": "课标核心",
+    "examples": [
+      {"en": "I love reading books.", "zh": "我爱读书。"}
+    ]
+  }
+]
