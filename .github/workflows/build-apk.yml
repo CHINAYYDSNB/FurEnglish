@@ -1,0 +1,207 @@
+name: lexi CI - 防骗检查 + APK 构建
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: '3.44.6'
+
+jobs:
+  # ===== 第一道门：防骗检查 + 测试 =====
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      commit-prefix: ${{ steps.prefix.outputs.prefix }}
+      apk-allowed: ${{ steps.prefix.outputs.apk_allowed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      # ===== 恢复签名密钥 =====
+      - name: Restore keystore
+        continue-on-error: true
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > android/app/lexi-keystore.jks
+            echo "storeFile=lexi-keystore.jks" > android/app/key.properties
+            echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/app/key.properties
+            echo "keyAlias=lexi" >> android/app/key.properties
+            echo "keyPassword=${{ secrets.KEYSTORE_PASSWORD }}" >> android/app/key.properties
+          fi
+        env:
+          KS: ${{ secrets.KEYSTORE_BASE64 }}
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # ===== Analyze（不致命） =====
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        continue-on-error: true
+
+      # ===== Check 1: 禁止空实现 =====
+      - name: "🛡️ Check 1: 禁止空实现"
+        run: |
+          FOUND=0
+          if grep -r "throw UnimplementedError" lib/ 2>/dev/null; then
+            echo "❌ 发现空实现: throw UnimplementedError"; FOUND=1
+          fi
+          if grep -r "^[[:space:]]*//[[:space:]]*TODO" lib/ 2>/dev/null; then
+            echo "❌ 发现未完成的TODO"; FOUND=1
+          fi
+          if grep -rE "=>[[:space:]]*null;|=>[[:space:]]*throw[[:space:]]*UnimplementedError" lib/ 2>/dev/null; then
+            echo "❌ 发现空函数体"; FOUND=1
+          fi
+          # UnsupportedError 允许（表示"未配置"的正常业务态）
+          if [ $FOUND -eq 1 ]; then
+            echo "════ AI CHEAT: 空实现 ════"; exit 1
+          fi
+          echo "✅ 无空实现"
+
+      # ===== Check 2: 禁止假测试 =====
+      - name: "🛡️ Check 2: 禁止假测试"
+        run: |
+          FOUND=0
+          if grep -rE "expect\(true,\s*true\)|expect\(false,\s*false\)" test/ 2>/dev/null; then
+            echo "❌ 假断言: expect(true, true)"; FOUND=1
+          fi
+          if grep -rE "expect\(1,\s*1\)|expect\(0,\s*0\)" test/ 2>/dev/null; then
+            echo "❌ 假断言: expect(1, 1)"; FOUND=1
+          fi
+          for f in $(find test -name "*_test.dart" 2>/dev/null); do
+            if ! grep -qE "expect\(|verify\(" "$f"; then
+              echo "❌ 无断言: $f"; FOUND=1
+            fi
+          done
+          if [ $FOUND -eq 1 ]; then
+            echo "════ AI CHEAT: 假测试 ════"; exit 1
+          fi
+          echo "✅ 无假测试"
+
+      # ===== Check 3: Service 必须有 verify() =====
+      - name: "🛡️ Check 3: Service 行为测试"
+        run: |
+          FOUND=0
+          for service in $(find lib/services -name "*.dart" 2>/dev/null); do
+            base=$(basename "$service" .dart)
+            test_file=$(find test -name "${base}_test.dart" 2>/dev/null | head -1)
+            if [ -z "$test_file" ]; then
+              echo "❌ 缺测试: $service"; FOUND=1; continue
+            fi
+            if ! grep -q "verify(" "$test_file"; then
+              echo "❌ 无 verify: $test_file"; FOUND=1
+            fi
+          done
+          if [ $FOUND -eq 1 ]; then
+            echo "════ AI CHEAT: 缺行为测试 ════"; exit 1
+          fi
+          echo "✅ 所有 Service 有 verify()"
+
+      # ===== Check 4: Commit 前缀 =====
+      - name: "🛡️ Check 4: Commit 前缀校验"
+        id: prefix
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit: $COMMIT_MSG"
+          PREFIX=$(echo "$COMMIT_MSG" | grep -oE '^(test|wip|done|partial|shell|blocked|failed)($|\(.*\):)')
+          
+          if [ -z "$PREFIX" ]; then
+            echo "❌ 缺少合规前缀"
+            echo "必须用: test:/wip:/done:/partial:/shell:/blocked:/failed:"
+            exit 1
+          fi
+          echo "✅ 前缀: $PREFIX"
+          echo "prefix=$PREFIX" >> $GITHUB_OUTPUT
+          
+          # done: 必须改了测试 + 有证据
+          if echo "$PREFIX" | grep -q "^done"; then
+            if ! git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "test/"; then
+              echo "❌ done: 无测试改动"; exit 1
+            fi
+            if ! echo "$COMMIT_MSG" | grep -qE "analyze|test|verify|0 error|passed"; then
+              echo "❌ done: 无验证证据"; exit 1
+            fi
+            echo "apk_allowed=true" >> $GITHUB_OUTPUT
+            echo "✅ done: 允许构建"
+          elif echo "$PREFIX" | grep -q "^test"; then
+            echo "apk_allowed=true" >> $GITHUB_OUTPUT
+            echo "ℹ️ test: 构建APK供测试"
+          else
+            echo "apk_allowed=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ $PREFIX: 不构建APK"
+          fi
+
+      # ===== 跑测试 =====
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Coverage
+        uses: VeryGoodOpenSource/very_good_coverage@v2
+        with:
+          path: coverage/lcov.info
+          min-coverage: 60
+        continue-on-error: true
+
+      # ===== 构建 APK（仅 test/done） =====
+      - name: Build APK
+        if: steps.prefix.outputs.apk_allowed == 'true'
+        run: flutter build apk --release
+
+      - name: Upload APK
+        if: steps.prefix.outputs.apk_allowed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lexi-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # ===== 最终判定 =====
+      - name: Verdict
+        if: always()
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════╗"
+          echo "║  lexi CI Verdict                          ║"
+          echo "╠══════════════════════════════════════════╣"
+          echo "║  test: → APK ✅ | 合并main ❌           ║"
+          echo "║  done: → APK ✅ | 合并main ✅(需用户)    ║"
+          echo "║  其他 → 不构建 | 不合并                  ║"
+          echo "╚══════════════════════════════════════════╝"
+
+  # ===== 第二道门：永久禁止 test:/wip: 合进 main =====
+  enforce-no-merge:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: "🔒 永久禁止 test:/wip: 合并 main"
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          PREFIX=$(echo "$COMMIT_MSG" | grep -oE '^(test|wip|done|partial|shell|blocked|failed)($|\(.*\):)')
+          echo "前缀: $PREFIX"
+          
+          if echo "$PREFIX" | grep -q "^done"; then
+            echo "✅ done: 允许合并（需人工审核）"
+            exit 0
+          fi
+          
+          echo ""
+          echo "❌ 拒绝合并：前缀 '$PREFIX' 不允许合入 main"
+          echo ""
+          echo "规则："
+          echo "  test:  → 只构建APK测试，禁止合并"
+          echo "  wip:   → 开发中，禁止合并"
+          echo "  partial → 未完成，禁止合并"
+          echo "  shell: → 只有壳，禁止合并"
+          echo "  done:  → 唯一允许合并的前缀"
+          echo ""
+          echo "请继续修改，直到 commit 前缀为 done:"
+          exit 1
